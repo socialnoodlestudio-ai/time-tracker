@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Time Tracker</title>
+  <style>
+    :root {
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #52606d;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #16a34a;
+      --danger: #dc2626;
+      --border: #d2d6dc;
+    }
+
+    body[data-theme="dark"] {
+      --bg: #0f172a;
+      --card: #111827;
+      --text: #e2e8f0;
+      --muted: #9ca3af;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --accent: #22c55e;
+      --danger: #f87171;
+      --border: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1rem clamp(1rem, 4vw, 3rem) 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      position: sticky;
+      top: 0;
+      background: linear-gradient(180deg, var(--bg) 85%, rgba(0,0,0,0));
+      z-index: 5;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+    }
+
+    nav {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    nav button {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    main {
+      flex: 1;
+      padding: 0  clamp(1rem, 4vw, 3rem) 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    section {
+      display: none;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    section.active {
+      display: flex;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+      border: 1px solid var(--border);
+    }
+
+    form {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    label {
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    input, select, textarea {
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 0.85rem 1.15rem;
+      border-radius: 0.85rem;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      min-height: 48px;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: var(--primary-dark);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .jobs-list, .entries-list, .report-summary {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .job-card, .entry-card {
+      display: grid;
+      gap: 0.5rem;
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .job-card header {
+      position: static;
+      background: none;
+      padding: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .job-card h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.15);
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .timer-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1rem;
+      border-radius: 1rem;
+      background: rgba(37, 99, 235, 0.12);
+      border: 1px solid rgba(37, 99, 235, 0.25);
+    }
+
+    .timer-banner.active {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .timer-display {
+      font-size: clamp(1.5rem, 6vw, 2.5rem);
+      font-weight: 700;
+    }
+
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .grow {
+      flex: 1 1 200px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .search-input {
+      width: 100%;
+    }
+
+    .chip-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.2);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    footer {
+      padding: 2rem 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 768px) {
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      header {
+        padding-bottom: 0.5rem;
+      }
+
+      main {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+
+    @media (pointer: coarse) {
+      button {
+        min-height: 52px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Time Tracker</h1>
+    <div class="timer-banner" id="timer-banner">
+      <div>
+        <strong>Timer Running:</strong>
+        <span id="timer-banner-job"></span>
+      </div>
+      <div class="inline-actions">
+        <span class="timer-display" id="timer-banner-elapsed">00:00:00</span>
+        <button id="stop-timer-btn" class="btn-danger">Stop Timer</button>
+      </div>
+    </div>
+    <nav>
+      <button data-view="today" class="btn-secondary active">Today</button>
+      <button data-view="jobs" class="btn-secondary">Jobs</button>
+      <button data-view="log" class="btn-secondary">Log</button>
+      <button data-view="reports" class="btn-secondary">Reports</button>
+      <button data-view="settings" class="btn-secondary">Settings</button>
+    </nav>
+  </header>
+  <main>
+    <section id="view-today" class="active">
+      <div class="card">
+        <h2>Today</h2>
+        <div class="flex-row">
+          <div class="grow">
+            <label>
+              Select Job
+              <select id="today-job-select"></select>
+            </label>
+          </div>
+          <div class="inline-actions">
+            <button id="start-timer-btn">Start Timer</button>
+            <button id="cancel-timer-btn" class="btn-secondary">Cancel Timer</button>
+          </div>
+        </div>
+        <div>
+          <p class="muted">Active Timer</p>
+          <div class="timer-display" id="today-timer-display">00:00:00</div>
+        </div>
+        <div>
+          <p class="muted">Total Tracked Today</p>
+          <div class="chip" id="today-total"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Upcoming Due Jobs</h3>
+        <div id="due-jobs"></div>
+      </div>
+    </section>
+
+    <section id="view-jobs">
+      <div class="card">
+        <h2>Add / Edit Job</h2>
+        <form id="job-form">
+          <input type="hidden" id="job-id" />
+          <label>
+            Job Title
+            <input type="text" id="job-title" required />
+          </label>
+          <label>
+            Client Name
+            <input type="text" id="job-client" required />
+          </label>
+          <label>
+            Hourly Rate ($)
+            <input type="number" id="job-rate" min="0" step="0.01" required />
+          </label>
+          <label>
+            Due Date
+            <input type="date" id="job-due" />
+          </label>
+          <div class="inline-actions">
+            <button type="submit" id="job-submit-btn">Save Job</button>
+            <button type="button" id="job-reset-btn" class="btn-secondary">Clear</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Jobs</h2>
+        <div class="jobs-list" id="jobs-list"></div>
+      </div>
+    </section>
+
+    <section id="view-log">
+      <div class="card">
+        <h2>Manual Time Entry</h2>
+        <form id="manual-entry-form">
+          <label>
+            Job
+            <select id="entry-job" required></select>
+          </label>
+          <label>
+            Start Time
+            <input type="datetime-local" id="entry-start" required />
+          </label>
+          <label>
+            End Time
+            <input type="datetime-local" id="entry-end" required />
+          </label>
+          <label>
+            Note
+            <textarea id="entry-note" placeholder="What did you work on?"></textarea>
+          </label>
+          <button type="submit">Add Entry</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="flex-row">
+          <h2 class="grow">Log</h2>
+          <input type="search" id="log-search" class="search-input" placeholder="Search job, client, or note" />
+        </div>
+        <div class="entries-list" id="entries-list"></div>
+      </div>
+    </section>
+
+    <section id="view-reports">
+      <div class="card">
+        <h2>Reports</h2>
+        <div class="flex-row">
+          <label>
+            From
+            <input type="date" id="report-from" />
+          </label>
+          <label>
+            To
+            <input type="date" id="report-to" />
+          </label>
+          <button id="report-apply">Apply</button>
+          <button id="report-csv" class="btn-secondary">Export CSV</button>
+        </div>
+        <div class="report-summary" id="report-summary"></div>
+        <div id="report-table"></div>
+      </div>
+    </section>
+
+    <section id="view-settings">
+      <div class="card">
+        <h2>Settings</h2>
+        <label>
+          Rounding Increment (minutes)
+          <select id="rounding-select">
+            <option value="1">1</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="30">30</option>
+          </select>
+        </label>
+        <label>
+          Theme
+          <select id="theme-select">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <div class="inline-actions">
+          <button id="export-json" class="btn-secondary">Export JSON</button>
+          <button id="import-json" class="btn-secondary">Import JSON</button>
+          <input type="file" id="import-file" accept="application/json" hidden />
+          <button id="reset-data" class="btn-danger">Reset All Data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    Data stays in your browser. Works offline once loaded.
+  </footer>
+
+  <script>
+    const STORAGE_KEY = 'timeTrackerData_v1';
+    const defaults = {
+      jobs: [],
+      entries: [],
+      settings: {
+        rounding: 5,
+        theme: 'light'
+      },
+      activeTimer: null
+    };
+
+    let state = loadState();
+    let timerInterval = null;
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return structuredClone(defaults);
+        const parsed = JSON.parse(stored);
+        return {
+          jobs: Array.isArray(parsed.jobs) ? parsed.jobs : [],
+          entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+          settings: Object.assign({}, defaults.settings, parsed.settings || {}),
+          activeTimer: parsed.activeTimer || null
+        };
+      } catch (error) {
+        console.error('Failed to load state', error);
+        return structuredClone(defaults);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function structuredClone(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function generateId(prefix) {
+      return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    }
+
+    function applyRounding(minutes) {
+      const increment = Number(state.settings.rounding) || 1;
+      return Math.ceil(minutes / increment) * increment;
+    }
+
+    function minutesBetween(startISO, endISO) {
+      const diff = (new Date(endISO).getTime() - new Date(startISO).getTime()) / 60000;
+      return diff < 0 ? 0 : diff;
+    }
+
+    function formatDuration(minutes) {
+      const hrs = Math.floor(minutes / 60);
+      const mins = Math.round(minutes % 60);
+      const parts = [];
+      if (hrs) parts.push(`${hrs}h`);
+      parts.push(`${mins.toString().padStart(2, '0')}m`);
+      return parts.join(' ');
+    }
+
+    function formatCurrency(rate, minutes) {
+      const total = (Number(rate) || 0) * (minutes / 60);
+      return `$${total.toFixed(2)}`;
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? '').replace(/[&<>"']/g, match => {
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        };
+        return map[match] || match;
+      });
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return 'No due date';
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function getJobById(jobId) {
+      return state.jobs.find(job => job.id === jobId) || null;
+    }
+
+    function getEntriesSorted() {
+      return [...state.entries].sort((a, b) => new Date(b.start) - new Date(a.start));
+    }
+
+    function totalMinutesForJob(jobId) {
+      return state.entries
+        .filter(entry => entry.jobId === jobId)
+        .reduce((sum, entry) => sum + (Number(entry.durationMinutes) || 0), 0);
+    }
+
+    function activateView(view) {
+      document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+      });
+      document.querySelectorAll('main section').forEach(section => {
+        section.classList.toggle('active', section.id === `view-${view}`);
+      });
+      if (view === 'reports') {
+        renderReports();
+      } else if (view === 'log') {
+        renderLog();
+      } else if (view === 'jobs') {
+        renderJobs();
+      } else if (view === 'today') {
+        renderToday();
+      }
+    }
+
+    function renderJobs() {
+      const list = document.getElementById('jobs-list');
+      list.innerHTML = '';
+      const sortedJobs = [...state.jobs].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (!sortedJobs.length) {
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = 'No jobs yet. Add one above to get started.';
+        list.appendChild(empty);
+      }
+      sortedJobs.forEach(job => {
+        const totalMinutes = totalMinutesForJob(job.id);
+        const jobCard = document.createElement('div');
+        jobCard.className = 'job-card';
+        jobCard.innerHTML = `
+          <header>
+            <div>
+              <h3>${escapeHTML(job.title)}</h3>
+              <p class="muted">${escapeHTML(job.client)}</p>
+            </div>
+            <span class="tag">$${Number(job.rate).toFixed(2)}/hr</span>
+          </header>
+          <div class="chip-group">
+            <span class="chip">Due: ${job.dueDate ? formatDate(job.dueDate) : 'Not set'}</span>
+            <span class="chip">Tracked: ${formatDuration(totalMinutes)}</span>
+          </div>
+        `;
+        const actions = document.createElement('div');
+        actions.className = 'inline-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-secondary';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => populateJobForm(job));
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', () => deleteJob(job.id));
+        actions.append(editBtn, deleteBtn);
+        jobCard.appendChild(actions);
+        list.appendChild(jobCard);
+      });
+      updateJobSelectOptions();
+    }
+
+    function renderToday() {
+      updateJobSelectOptions();
+      updateTimerDisplay();
+      updateTodayTotals();
+      renderDueJobs();
+    }
+
+    function renderDueJobs() {
+      const container = document.getElementById('due-jobs');
+      container.innerHTML = '';
+      const now = new Date();
+      const inSevenDays = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+      const upcoming = state.jobs
+        .filter(job => job.dueDate)
+        .filter(job => {
+          const due = new Date(job.dueDate);
+          return due >= startOfDay(now) && due <= endOfDay(inSevenDays);
+        })
+        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      if (!upcoming.length) {
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = 'No jobs due in the next 7 days.';
+        container.appendChild(empty);
+        return;
+      }
+      upcoming.forEach(job => {
+        const row = document.createElement('div');
+        row.className = 'job-card';
+        row.innerHTML = `
+          <div class="flex-row">
+            <div class="grow">
+              <strong>${escapeHTML(job.title)}</strong>
+              <p class="muted">${escapeHTML(job.client)}</p>
+            </div>
+            <span class="chip">Due ${formatDate(job.dueDate)}</span>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function renderLog() {
+      updateJobSelectOptions();
+      const list = document.getElementById('entries-list');
+      const searchTerm = document.getElementById('log-search').value.trim().toLowerCase();
+      const entries = getEntriesSorted().filter(entry => {
+        if (!searchTerm) return true;
+        const job = getJobById(entry.jobId);
+        const haystack = [
+          job ? job.title : '',
+          job ? job.client : '',
+          entry.note || ''
+        ].join(' ').toLowerCase();
+        return haystack.includes(searchTerm);
+      });
+      list.innerHTML = '';
+      if (!entries.length) {
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = 'No entries found.';
+        list.appendChild(empty);
+        return;
+      }
+      entries.forEach(entry => {
+        const job = getJobById(entry.jobId);
+        const card = document.createElement('div');
+        card.className = 'entry-card';
+        const note = entry.note ? escapeHTML(entry.note) : '<span class="muted">No note</span>';
+        card.innerHTML = `
+          <div class="flex-row">
+            <div class="grow">
+              <strong>${job ? escapeHTML(job.title) : 'Job Removed'}</strong>
+              <p class="muted">${job ? escapeHTML(job.client) : ''}</p>
+            </div>
+            <span class="tag">${formatDuration(entry.durationMinutes)}</span>
+          </div>
+          <p class="muted">${new Date(entry.start).toLocaleString()} - ${new Date(entry.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+          <div>${note}</div>
+        `;
+        const actions = document.createElement('div');
+        actions.className = 'inline-actions';
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-secondary';
+        editBtn.textContent = 'Edit Note';
+        editBtn.addEventListener('click', () => editEntryNote(entry.id));
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', () => deleteEntry(entry.id));
+        actions.append(editBtn, deleteBtn);
+        card.appendChild(actions);
+        list.appendChild(card);
+      });
+    }
+
+    function renderReports() {
+      const fromInput = document.getElementById('report-from');
+      const toInput = document.getElementById('report-to');
+      let fromDate = fromInput.value ? startOfDay(new Date(fromInput.value)) : startOfWeek(new Date());
+      let toDate = toInput.value ? endOfDay(new Date(toInput.value)) : endOfWeek(new Date());
+      if (!fromInput.value) fromInput.value = isoDateString(fromDate);
+      if (!toInput.value) toInput.value = isoDateString(toDate);
+      if (fromDate > toDate) {
+        const originalFrom = fromDate;
+        const originalTo = toDate;
+        fromDate = startOfDay(new Date(originalTo));
+        toDate = endOfDay(new Date(originalFrom));
+        fromInput.value = isoDateString(fromDate);
+        toInput.value = isoDateString(toDate);
+      }
+      const filtered = state.entries.filter(entry => {
+        const start = new Date(entry.start);
+        return start >= fromDate && start <= toDate;
+      });
+      const totalMinutes = filtered.reduce((sum, entry) => sum + Number(entry.durationMinutes || 0), 0);
+      const totalEarnings = filtered.reduce((sum, entry) => {
+        const job = getJobById(entry.jobId);
+        const rate = job ? Number(job.rate) : 0;
+        return sum + rate * (Number(entry.durationMinutes) / 60);
+      }, 0);
+      const summary = document.getElementById('report-summary');
+      summary.innerHTML = '';
+      const cards = [
+        { label: 'Entries', value: filtered.length },
+        { label: 'Total Hours', value: (totalMinutes / 60).toFixed(2) },
+        { label: 'Earnings', value: `$${totalEarnings.toFixed(2)}` }
+      ];
+      cards.forEach(item => {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.textContent = `${item.label}: ${item.value}`;
+        summary.appendChild(chip);
+      });
+      const tableWrapper = document.getElementById('report-table');
+      tableWrapper.innerHTML = '';
+      if (!filtered.length) {
+        const empty = document.createElement('p');
+        empty.className = 'muted';
+        empty.textContent = 'No entries for the selected range.';
+        tableWrapper.appendChild(empty);
+        return;
+      }
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Job</th>
+            <th>Client</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Duration</th>
+            <th>Note</th>
+            <th>Rate</th>
+            <th>Earnings</th>
+          </tr>
+        </thead>
+      `;
+      const tbody = document.createElement('tbody');
+      filtered.sort((a, b) => new Date(b.start) - new Date(a.start)).forEach(entry => {
+        const job = getJobById(entry.jobId);
+        const rate = job ? Number(job.rate) : 0;
+        const earnings = rate * (Number(entry.durationMinutes) / 60);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${new Date(entry.start).toLocaleDateString()}</td>
+          <td>${job ? escapeHTML(job.title) : 'Job Removed'}</td>
+          <td>${job ? escapeHTML(job.client) : ''}</td>
+          <td>${new Date(entry.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td>${new Date(entry.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td>${formatDuration(entry.durationMinutes)}</td>
+          <td>${entry.note ? escapeHTML(entry.note) : ''}</td>
+          <td>$${rate.toFixed(2)}</td>
+          <td>$${earnings.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableWrapper.appendChild(table);
+    }
+
+    function renderSettings() {
+      document.getElementById('rounding-select').value = state.settings.rounding;
+      document.getElementById('theme-select').value = state.settings.theme;
+      document.body.dataset.theme = state.settings.theme;
+    }
+
+    function updateTimerDisplay() {
+      const display = document.getElementById('today-timer-display');
+      if (!state.activeTimer) {
+        display.textContent = '00:00:00';
+        document.getElementById('start-timer-btn').disabled = !state.jobs.length;
+        document.getElementById('cancel-timer-btn').disabled = true;
+        document.getElementById('today-job-select').disabled = false;
+        return;
+      }
+      const elapsed = computeElapsedSeconds();
+      display.textContent = formatClock(elapsed);
+      document.getElementById('start-timer-btn').disabled = true;
+      document.getElementById('cancel-timer-btn').disabled = false;
+      document.getElementById('today-job-select').value = state.activeTimer.jobId;
+      document.getElementById('today-job-select').disabled = true;
+    }
+
+    function computeElapsedSeconds() {
+      if (!state.activeTimer) return 0;
+      const start = new Date(state.activeTimer.start);
+      const now = new Date();
+      return Math.max(0, Math.floor((now - start) / 1000));
+    }
+
+    function formatClock(totalSeconds) {
+      const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function updateTimerBanner() {
+      const banner = document.getElementById('timer-banner');
+      if (!state.activeTimer) {
+        banner.classList.remove('active');
+        return;
+      }
+      const job = getJobById(state.activeTimer.jobId);
+      document.getElementById('timer-banner-job').textContent = job ? `${job.title} • ${job.client}` : 'Job Removed';
+      document.getElementById('timer-banner-elapsed').textContent = formatClock(computeElapsedSeconds());
+      banner.classList.add('active');
+    }
+
+    function updateTodayTotals() {
+      const todayDisplay = document.getElementById('today-total');
+      const now = new Date();
+      const start = startOfDay(now);
+      const end = endOfDay(now);
+      let minutes = state.entries
+        .filter(entry => new Date(entry.start) >= start && new Date(entry.start) <= end)
+        .reduce((sum, entry) => sum + Number(entry.durationMinutes || 0), 0);
+      if (state.activeTimer) {
+        const startTime = new Date(state.activeTimer.start);
+        if (startTime >= start && startTime <= end) {
+          minutes += computeElapsedSeconds() / 60;
+        }
+      }
+      todayDisplay.textContent = formatDuration(minutes);
+    }
+
+    function updateJobSelectOptions() {
+      const selects = [document.getElementById('today-job-select'), document.getElementById('entry-job')];
+      selects.forEach(select => {
+        if (!select) return;
+        const previous = select.value;
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = state.jobs.length ? 'Select a job' : 'Add a job first';
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        select.appendChild(placeholder);
+        state.jobs
+          .slice()
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+          .forEach(job => {
+            const option = document.createElement('option');
+            option.value = job.id;
+            option.textContent = `${job.title} (${job.client})`;
+            select.appendChild(option);
+          });
+        if (previous) {
+          select.value = previous;
+        }
+        if (state.jobs.length) {
+          placeholder.disabled = true;
+        }
+      });
+      document.getElementById('start-timer-btn').disabled = !state.jobs.length || Boolean(state.activeTimer);
+    }
+
+    function populateJobForm(job) {
+      document.getElementById('job-id').value = job.id;
+      document.getElementById('job-title').value = job.title;
+      document.getElementById('job-client').value = job.client;
+      document.getElementById('job-rate').value = job.rate;
+      document.getElementById('job-due').value = job.dueDate || '';
+      document.getElementById('job-submit-btn').textContent = 'Update Job';
+    }
+
+    function resetJobForm() {
+      document.getElementById('job-form').reset();
+      document.getElementById('job-id').value = '';
+      document.getElementById('job-submit-btn').textContent = 'Save Job';
+    }
+
+    function deleteJob(jobId) {
+      const job = getJobById(jobId);
+      if (!confirm(`Delete ${job ? job.title : 'this job'}? Existing entries stay in the log.`)) return;
+      if (state.activeTimer && state.activeTimer.jobId === jobId) {
+        cancelTimer(false);
+      }
+      state.jobs = state.jobs.filter(job => job.id !== jobId);
+      saveState();
+      renderJobs();
+      renderToday();
+      renderReports();
+      renderLog();
+    }
+
+    function editEntryNote(entryId) {
+      const entry = state.entries.find(item => item.id === entryId);
+      if (!entry) return;
+      const newNote = prompt('Update note', entry.note || '');
+      if (newNote === null) return;
+      entry.note = newNote.trim();
+      saveState();
+      renderLog();
+      renderReports();
+    }
+
+    function deleteEntry(entryId) {
+      if (!confirm('Delete this time entry?')) return;
+      state.entries = state.entries.filter(entry => entry.id !== entryId);
+      saveState();
+      renderLog();
+      renderReports();
+      renderToday();
+    }
+
+    function startTimer(jobId) {
+      if (!jobId) return alert('Select a job to start the timer.');
+      if (state.activeTimer) {
+        alert('Stop the current timer before starting a new one.');
+        return;
+      }
+      state.activeTimer = {
+        jobId,
+        start: new Date().toISOString()
+      };
+      saveState();
+      startTimerInterval();
+      updateTimerBanner();
+      updateTimerDisplay();
+      renderToday();
+    }
+
+    function stopTimer() {
+      if (!state.activeTimer) return;
+      const end = new Date();
+      const { jobId, start } = state.activeTimer;
+      const rawMinutes = minutesBetween(start, end.toISOString());
+      const duration = applyRounding(rawMinutes);
+      const entry = {
+        id: generateId('entry'),
+        jobId,
+        start,
+        end: end.toISOString(),
+        durationMinutes: duration,
+        note: '',
+        createdAt: new Date().toISOString()
+      };
+      state.entries.push(entry);
+      state.activeTimer = null;
+      saveState();
+      stopTimerInterval();
+      updateTimerBanner();
+      updateTimerDisplay();
+      renderToday();
+      renderLog();
+      renderReports();
+    }
+
+    function cancelTimer(showConfirm = true) {
+      if (!state.activeTimer) return;
+      if (showConfirm && !confirm('Cancel the running timer without saving?')) return;
+      state.activeTimer = null;
+      saveState();
+      stopTimerInterval();
+      updateTimerBanner();
+      renderToday();
+    }
+
+    function startTimerInterval() {
+      if (timerInterval) clearInterval(timerInterval);
+      if (!state.activeTimer) return;
+      timerInterval = setInterval(() => {
+        updateTimerDisplay();
+        updateTimerBanner();
+        updateTodayTotals();
+      }, 1000);
+    }
+
+    function stopTimerInterval() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function addJob(event) {
+      event.preventDefault();
+      const id = document.getElementById('job-id').value;
+      const title = document.getElementById('job-title').value.trim();
+      const client = document.getElementById('job-client').value.trim();
+      const rate = Number(document.getElementById('job-rate').value || 0);
+      const dueDate = document.getElementById('job-due').value;
+      if (!title || !client) {
+        alert('Title and client are required.');
+        return;
+      }
+      if (rate < 0) {
+        alert('Rate must be zero or higher.');
+        return;
+      }
+      if (id) {
+        const job = getJobById(id);
+        if (!job) return;
+        job.title = title;
+        job.client = client;
+        job.rate = rate;
+        job.dueDate = dueDate || '';
+        job.updatedAt = new Date().toISOString();
+      } else {
+        state.jobs.unshift({
+          id: generateId('job'),
+          title,
+          client,
+          rate,
+          dueDate: dueDate || '',
+          createdAt: new Date().toISOString()
+        });
+      }
+      saveState();
+      resetJobForm();
+      renderJobs();
+      renderToday();
+      renderReports();
+    }
+
+    function addManualEntry(event) {
+      event.preventDefault();
+      if (!state.jobs.length) {
+        alert('Add a job before creating entries.');
+        return;
+      }
+      const jobId = document.getElementById('entry-job').value;
+      const startInput = document.getElementById('entry-start').value;
+      const endInput = document.getElementById('entry-end').value;
+      const note = document.getElementById('entry-note').value.trim();
+      if (!jobId) {
+        alert('Pick a job.');
+        return;
+      }
+      const start = new Date(startInput);
+      const end = new Date(endInput);
+      if (!(startInput && endInput) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        alert('Provide valid start and end times.');
+        return;
+      }
+      if (end <= start) {
+        alert('End time must be after start time.');
+        return;
+      }
+      const rawMinutes = (end - start) / 60000;
+      const durationMinutes = applyRounding(rawMinutes);
+      const entry = {
+        id: generateId('entry'),
+        jobId,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        durationMinutes,
+        note,
+        createdAt: new Date().toISOString()
+      };
+      state.entries.push(entry);
+      saveState();
+      event.target.reset();
+      renderLog();
+      renderReports();
+      renderToday();
+    }
+
+    function updateSettings() {
+      state.settings.rounding = Number(document.getElementById('rounding-select').value || 1);
+      state.settings.theme = document.getElementById('theme-select').value || 'light';
+      document.body.dataset.theme = state.settings.theme;
+      saveState();
+      renderReports();
+      renderToday();
+    }
+
+    function exportJSON() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `time-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(file) {
+      const reader = new FileReader();
+      reader.onload = event => {
+        try {
+          const imported = JSON.parse(event.target.result);
+          state = {
+            jobs: Array.isArray(imported.jobs) ? imported.jobs : [],
+            entries: Array.isArray(imported.entries) ? imported.entries : [],
+            settings: Object.assign({}, defaults.settings, imported.settings || {}),
+            activeTimer: imported.activeTimer || null
+          };
+          saveState();
+          renderAll();
+        } catch (error) {
+          alert('Invalid JSON backup.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetData() {
+      if (!confirm('Reset all data? This cannot be undone.')) return;
+      state = structuredClone(defaults);
+      saveState();
+      renderAll();
+    }
+
+    function isoDateString(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function startOfDay(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function endOfDay(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    }
+
+    function startOfWeek(date) {
+      const clone = new Date(date);
+      const day = clone.getDay();
+      const diff = clone.getDate() - day + (day === 0 ? -6 : 1);
+      clone.setDate(diff);
+      return startOfDay(clone);
+    }
+
+    function endOfWeek(date) {
+      const start = startOfWeek(new Date(date));
+      return endOfDay(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6));
+    }
+
+    function renderAll() {
+      renderJobs();
+      renderToday();
+      renderLog();
+      renderReports();
+      renderSettings();
+      updateTimerBanner();
+      if (state.activeTimer) {
+        startTimerInterval();
+      } else {
+        stopTimerInterval();
+      }
+    }
+
+    document.querySelectorAll('nav button').forEach(button => {
+      button.addEventListener('click', () => activateView(button.dataset.view));
+    });
+
+    document.getElementById('job-form').addEventListener('submit', addJob);
+    document.getElementById('job-reset-btn').addEventListener('click', resetJobForm);
+    document.getElementById('manual-entry-form').addEventListener('submit', addManualEntry);
+    document.getElementById('log-search').addEventListener('input', renderLog);
+    document.getElementById('start-timer-btn').addEventListener('click', () => startTimer(document.getElementById('today-job-select').value));
+    document.getElementById('stop-timer-btn').addEventListener('click', stopTimer);
+    document.getElementById('cancel-timer-btn').addEventListener('click', () => cancelTimer(true));
+    document.getElementById('report-apply').addEventListener('click', renderReports);
+    document.getElementById('report-csv').addEventListener('click', exportCSV);
+    document.getElementById('rounding-select').addEventListener('change', updateSettings);
+    document.getElementById('theme-select').addEventListener('change', updateSettings);
+    document.getElementById('export-json').addEventListener('click', exportJSON);
+    document.getElementById('import-json').addEventListener('click', () => document.getElementById('import-file').click());
+    document.getElementById('import-file').addEventListener('change', event => {
+      const [file] = event.target.files;
+      if (file) {
+        importJSON(file);
+      }
+      event.target.value = '';
+    });
+    document.getElementById('reset-data').addEventListener('click', resetData);
+
+    function exportCSV() {
+      const from = document.getElementById('report-from').value;
+      const to = document.getElementById('report-to').value;
+      const fromDate = from ? startOfDay(new Date(from)) : startOfWeek(new Date());
+      const toDate = to ? endOfDay(new Date(to)) : endOfWeek(new Date());
+      const entries = state.entries.filter(entry => {
+        const start = new Date(entry.start);
+        return start >= fromDate && start <= toDate;
+      });
+      const rows = [
+        ['date', 'job_title', 'client', 'start_time', 'end_time', 'duration_minutes', 'note', 'hourly_rate', 'earnings']
+      ];
+      entries.forEach(entry => {
+        const job = getJobById(entry.jobId);
+        const rate = job ? Number(job.rate) : 0;
+        const earnings = rate * (Number(entry.durationMinutes) / 60);
+        rows.push([
+          isoDateString(new Date(entry.start)),
+          job ? job.title : 'Job Removed',
+          job ? job.client : '',
+          new Date(entry.start).toLocaleString(),
+          new Date(entry.end).toLocaleString(),
+          Number(entry.durationMinutes),
+          entry.note || '',
+          rate.toFixed(2),
+          earnings.toFixed(2)
+        ]);
+      });
+      const csvContent = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `time-tracker-report-${new Date().toISOString().split('T')[0]}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    renderAll();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+      });
+    }
+  </script>
+</body>
+</html>
